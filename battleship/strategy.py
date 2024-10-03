@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 import random
-
+import sys
 class Strategy(ABC):
     def __init__(self, game):
         self.game = game
@@ -136,7 +136,7 @@ class ProbabilityStrategy(Strategy):
                         if all(j in [(row, col + i) for i in range(size)] for j in self.last_hitted) and all(self.game.board[row][col + i] in [" ", "S", "X"] for i in range(size)):
                             for i in range(size):
                                 # Zwieksza prawdopodobienstwo w macierzy, jesli miejsce nie jest juz trafione
-                                if self.game.board[row + i] != "X":
+                                if self.game.board[row][col + i] != "X":
                                     self.probability_grid[row][col + i] += 1
                                     flag = False
                 # Sprawdza pionowe umiejscowienia statku
