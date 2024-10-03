@@ -94,7 +94,6 @@ class ProbabilityStrategy(Strategy):
             self.update_probability_grid_not_hitted_ship()
 
     def update_probability_grid_not_hitted_ship(self):
-        print("b")
         # Inicjalizuje macierz jako dwuwymiarowa lista zer
         self.probability_grid = [[0 for _ in range(self.game.board_size)] for _ in range(self.game.board_size)]
         # Iteruje przez wszystkie statki w grze
@@ -120,7 +119,6 @@ class ProbabilityStrategy(Strategy):
                                 self.probability_grid[row + i][col] += 1
 
     def update_probability_grid_hitted_ship(self):
-        print("a")
         # Inicjalizuje macierz jako dwuwymiarowa lista zer
         self.probability_grid = [[0 for _ in range(self.game.board_size)] for _ in range(self.game.board_size)]
         flag = True
