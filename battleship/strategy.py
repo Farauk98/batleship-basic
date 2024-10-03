@@ -32,8 +32,11 @@ class Strategy(ABC):
         return hit, is_sunk
 
 class RandomStrategy(Strategy):
-    def take_turn(self,x):
+    # Metoda take_turn jest odpowiedzialna za wykonanie ruchu w grze.
+    def take_turn(self):
+        # Wybiera losowy strzal, zwracajac wspolrzedne w postaci krotki (wiersz, kolumna).
         row, col = self.select_random_shot()
+        # Wykonuje strzal na podstawie wybranych wspolrzednych.
         self.perform_shot(row, col)
 
 class HuntAndTargetStrategy(RandomStrategy):
@@ -66,12 +69,10 @@ class HuntAndTargetStrategy(RandomStrategy):
                 elif not self.target_stack:
                     self.hunt_mode = True
 
-class ProbabilityBetterStrategy(Strategy):
+class ProbabilityStrategy(Strategy):
     
     def __init__(self, game):
         super().__init__(game)
-        self.hunt_mode = True
-        self.target_stack = []
         self.probability_grid = [[0 for _ in range(self.game.board_size)] for _ in range(self.game.board_size)]
         self.last_hitted = []
 
@@ -80,79 +81,100 @@ class ProbabilityBetterStrategy(Strategy):
         for i in range(self.game.board_size):
             print(str(i) + " " + " ".join([str(self.probability_grid[i][j]) for j in range(self.game.board_size)]))
         
-    def check_tuples(self,lst):
-        first_positions = {t[0] for t in lst}  # Zbiór wartości pierwszej pozycji
-        second_positions = {t[1] for t in lst}  # Zbiór wartości drugiej pozycji
-        return len(first_positions) == 1 or len(second_positions) == 1
 
     def update_probability_grid(self):
-        if any(ship.is_demaged() for ship in self.game.ships):
-            # print("ship.is_demaged")
+        # Sprawdza, czy jakikolwiek statek w grze jest uszkodzony.
+        if any(ship.is_damaged() for ship in self.game.ships):
+            # Aktualizuje macierz, gdy chociaż jeden statek zostal uszkodzony.
             self.update_probability_grid_hitted_ship()
-            return
         else:
+            # Resetuje liste pol uszkodzonych statków.
             self.last_hitted = []
-            # print("ship.is_not_demaged")
+            # Aktualizuje macierz, gdy zaden statek nie zostal uszkodzone.
             self.update_probability_grid_not_hitted_ship()
 
     def update_probability_grid_not_hitted_ship(self):
+        print("b")
+        # Inicjalizuje macierz jako dwuwymiarowa lista zer
         self.probability_grid = [[0 for _ in range(self.game.board_size)] for _ in range(self.game.board_size)]
+        # Iteruje przez wszystkie statki w grze
         for ship in self.game.ships:
+            # Sprawdza, czy statek nie jest zatopiony
             if not ship.is_sunk():
                 size = ship.size
-                # Check horizontal placements
+                # Sprawdza poziome umiejscowienia statku
                 for row in range(self.game.board_size):
                     for col in range(self.game.board_size - size + 1):
+                        # Sprawdza, czy w danej pozycji mozna umiescic statek
                         if all(self.game.board[row][col + i] in [" ", "S"] for i in range(size)):
+                            # Zwieksza wartości w macierzy dla kazdej pozycji statku
                             for i in range(size):
                                 self.probability_grid[row][col + i] += 1
-                # Check vertical placements
+                # Sprawdza pionowe umiejscowienia statku
                 for row in range(self.game.board_size - size + 1):
                     for col in range(self.game.board_size):
+                        # Sprawdza, czy w danej pozycji mozna umiescic statek
                         if all(self.game.board[row + i][col] in [" ", "S"] for i in range(size)):
+                            # Zwieksza wartości w macierzy dla kazdej pozycji statku
                             for i in range(size):
                                 self.probability_grid[row + i][col] += 1
 
     def update_probability_grid_hitted_ship(self):
+        print("a")
+        # Inicjalizuje macierz jako dwuwymiarowa lista zer
         self.probability_grid = [[0 for _ in range(self.game.board_size)] for _ in range(self.game.board_size)]
-        # print(self.last_hitted)
-        if self.check_tuples(self.last_hitted):
+        flag = True
+        # Iteruje przez wszystkie statki w grze
+        for ship in self.game.ships:
+            # Sprawdza, czy statek nie jest zatopiony
+            if not ship.is_sunk():
+                size = ship.size
+                # Sprawdza poziome umiejscowienia statku
+                for row in range(self.game.board_size):
+                    for col in range(self.game.board_size - size + 1):
+                        # Sprawdza, czy ostatnio trafione wspolrzedne sa w danym umiejscowieniu
+                        if all(j in [(row, col + i) for i in range(size)] for j in self.last_hitted) and all(self.game.board[row][col + i] in [" ", "S", "X"] for i in range(size)):
+                            for i in range(size):
+                                # Zwieksza prawdopodobienstwo w macierzy, jesli miejsce nie jest juz trafione
+                                if self.game.board[row + i] != "X":
+                                    self.probability_grid[row][col + i] += 1
+                                    flag = False
+                # Sprawdza pionowe umiejscowienia statku
+                for row in range(self.game.board_size - size + 1):
+                    for col in range(self.game.board_size):
+                        # Sprawdza, czy ostatnio trafione wspolrzedne sa w danym umiejscowieniu
+                        if all(j in [(row + i, col) for i in range(size)] for j in self.last_hitted) and all(self.game.board[row + i][col] in [" ", "S", "X"] for i in range(size)):
+                            for i in range(size):
+                                # Zwieksza prawdopodobienstwo w macierzy, jesli miejsce nie jest juz trafione
+                                if self.game.board[row + i][col] != "X":
+                                    self.probability_grid[row + i][col] += 1
+                                    flag = False
+        # Sprawdza, czy nie bylo zmian w macierzy
+        if flag:
+            # Ponownie iteruje przez wszystkie statki w grze
             for ship in self.game.ships:
+                # Sprawdza, czy statek nie jest zatopiony
                 if not ship.is_sunk():
                     size = ship.size
-                    # Check horizontal placements
+
+                    # Sprawdza poziome umiejscowienia statku
                     for row in range(self.game.board_size):
                         for col in range(self.game.board_size - size + 1):
-                            if all(j in [(row, col + i) for i in range(size)] for j in self.last_hitted) and all(self.game.board[row][col + i] in [" ", "S", "X"] for i in range(size)):
-                                for i in range(size):
-                                    if self.game.board[row][col +i ] != "X":
-                                        self.probability_grid[row][col + i] += 1
-
-                    # Check vertical placements
-                    for row in range(self.game.board_size - size + 1):
-                        for col in range(self.game.board_size):
-                            if all(j in [(row+i, col ) for i in range(size)] for j in self.last_hitted) and all (self.game.board[row + i][col] in [" ", "S", "X"] for i in range(size)):
-                                for i in range(size):
-                                    if self.game.board[row + i][col] != "X":
-                                        self.probability_grid[row + i][col] += 1
-        else:
-            for ship in self.game.ships:
-                if not ship.is_sunk():
-                    size = ship.size
-
-                    # Check horizontal placements
-                    for row in range(self.game.board_size):
-                        for col in range(self.game.board_size - size + 1):
+                            # Sprawdza, czy ostatnio trafione wspolrzedne sa w danym umiejscowieniu
                             if any((row, col + i) in self.last_hitted for i in range(size)) and all(self.game.board[row][col + i] in [" ", "S", "X"] for i in range(size)):
                                 for i in range(size):
+                                    # Zwieksza prawdopodobienstwo w macierzy
                                     self.probability_grid[row][col + i] += 1
                     
-                    # Check vertical placements
+                    # Sprawdza pionowe umiejscowienia statku
                     for row in range(self.game.board_size - size + 1):
                         for col in range(self.game.board_size):
-                            if any((row+i, col) in self.last_hitted for i in range(size)) and all (self.game.board[row + i][col] in [" ", "S", "X"] for i in range(size)):
+                            # Sprawdza, czy ostatnio trafione wspolrzedne sa w danym umiejscowieniu
+                            if any((row + i, col) in self.last_hitted for i in range(size)) and all(self.game.board[row + i][col] in [" ", "S", "X"] for i in range(size)):
                                 for i in range(size):
+                                    # Zwieksza prawdopodobienstwo w macierzy
                                     self.probability_grid[row + i][col] += 1
+
 
     def probability_shot(self):
         max_prob = -1
@@ -173,9 +195,10 @@ class ProbabilityBetterStrategy(Strategy):
 
     def take_turn(self):
         self.update_probability_grid()
+        # self.display_probability_grid()
         self.probability_shot()
 
-class ProbabilityBetterChessboardStrategy(ProbabilityBetterStrategy):
+class ProbabilityChessboardStrategy(ProbabilityStrategy):
     
     def __init__(self, game, divisor, remainder, block):
         super().__init__(game)
@@ -197,33 +220,40 @@ class ProbabilityBetterChessboardStrategy(ProbabilityBetterStrategy):
             return False
 
     def update_probability_grid_not_hitted_ship(self):
+        # Inicjalizacja macierzy na zerowe wartosci
         self.probability_grid = [[0 for _ in range(self.game.board_size)] for _ in range(self.game.board_size)]
         
-        # First phase, apply chessboard strategy based on divisor and remainder
+        # Pierwsza faza, zastosowanie strategii szachownicy na podstawie dzielnika i reszty
         if self.game.shot_count < self.block:
             for ship in self.game.ships:
+                # Sprawdzenie, czy statek nie jest zatopiony
                 if not ship.is_sunk():
                     size = ship.size
-                    # Check horizontal placements
+                    # Sprawdzenie poziomych ustawien
                     for row in range(self.game.board_size):
                         for col in range(self.game.board_size - size + 1):
+                            # Sprawdzenie, czy wszystkie pola sa puste lub zajete przez statek
                             if all(self.game.board[row][col + i] in [" ", "S"] for i in range(size)):
                                 for i in range(size):
+                                    # Sprawdzenie reszty dla danego pola
                                     if self.check_remainder(self.divisor, self.remainder, row, (col + i)):
                                         self.probability_grid[row][col + i] += 1
                                         
-                    # Check vertical placements
+                    # Sprawdzenie pionowych ustawien
                     for row in range(self.game.board_size - size + 1):
                         for col in range(self.game.board_size):
+                            # Sprawdzenie, czy wszystkie pola sa puste lub zajete przez statek
                             if all(self.game.board[row + i][col] in [" ", "S"] for i in range(size)):
                                 for i in range(size):
+                                    # Sprawdzenie reszty dla danego pola
                                     if self.check_remainder(self.divisor, self.remainder, (row + i), col):
                                         self.probability_grid[row + i][col] += 1
-        # Second phase, apply the normal strategy
+        # Druga faza, zastosowanie normalnej strategii probabilistycznej
         else:
             super().update_probability_grid_not_hitted_ship()
 
-class ProbabilityBetterSmallerSquareStrategy(ProbabilityBetterStrategy):
+
+class ProbabilitySmallerRectangleStrategy(ProbabilityStrategy):
     
     def __init__(self, game, top_left_corner, lower_right_corner, block):
         super().__init__(game)

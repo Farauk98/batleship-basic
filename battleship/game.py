@@ -1,8 +1,8 @@
 import random
 from battleship.ship import Ship
 from battleship.strategy import (Strategy, RandomStrategy, HuntAndTargetStrategy,
-                                  ProbabilityBetterStrategy, ProbabilityBetterChessboardStrategy,
-                                  ProbabilityBetterSmallerSquareStrategy)
+                                  ProbabilityStrategy, ProbabilityChessboardStrategy,
+                                  ProbabilitySmallerRectangleStrategy)
 
 class Game:
     def __init__(self, board_size=10, strategy=None):
@@ -170,4 +170,6 @@ class Game:
             self.add_ship(size)
 
         while not self.is_game_over():
+            # self.display_board(reveal=True)
             self.strategy.take_turn()
+        # print(f'end {self.shot_count}')
